@@ -24,7 +24,7 @@ def readData(path):
         return X, Y
     else:
         print(path1 + ' not found.')
-        print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+        print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
         sys.exit(1)
 
 def purity_score(y_true, y_pred):

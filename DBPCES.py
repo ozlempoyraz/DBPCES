@@ -19,7 +19,7 @@ randomState1 = 1
 warnings.filterwarnings('ignore')
 
 if len(sys.argv) != 6:
-    print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+    print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
     sys.exit(1)
 
 path = sys.argv[1]
@@ -27,25 +27,25 @@ streamName = path.split("/")[-1].split(".")[0]
 X, labels = readData(path)
 
 try:
-    horizon = int(sys.argv[2])
+    window_size = int(sys.argv[2])
 except ValueError:
     # Handle the exception
     print('Horizon should be an integer')
-    print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+    print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
     sys.exit(1)
 try:
     init_size = int(sys.argv[3])
 except ValueError:
     # Handle the exception
     print('init_size should be an integer')
-    print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+    print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
     sys.exit(1)
 try:
     reinit_period = int(sys.argv[4])
 except ValueError:
     # Handle the exception
     print('reinit_period should be an integer')
-    print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+    print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
     sys.exit(1)
 
 
@@ -63,11 +63,11 @@ elif sys.argv[5] == 'dbscan':
     folder = "results/dbscan/"
 else:
     print('\nusage:Invalid algorithm name. valid options:dbpces/kmeans/dbscan\n')
-    print('\nusage: python DBPCES.py datasetFilePath horizon init_size reinit_period algo:dbpces/kmeans/dbscan\n')
+    print('\nusage: python DBPCES.py datasetFilePath window_size init_size reinit_period algo:dbpces/kmeans/dbscan\n')
     sys.exit(1)
 
 
-filename = streamName + "-horizon" + str(horizon) + "-initSize" + str(init_size) + "-reinit" + str(reinit_period) + ".txt"
+filename = streamName + "-window_size" + str(window_size) + "-initSize" + str(init_size) + "-reinit" + str(reinit_period) + ".txt"
 output = folder + filename
 
 os.makedirs(os.path.dirname(output), exist_ok=True)
@@ -82,7 +82,7 @@ reinit_cnt = int(np.math.ceil(length / reinit_period))
 minPts = 5
 print('data length : {}'.format(length))
 
-print('reinit period: {}\ninit size: {}\nhorizon: {}\nminPts: {}'.format(reinit_period, init_size, horizon, minPts))
+print('reinit period: {}\ninit size: {}\nwindow_size: {}\nminPts: {}'.format(reinit_period, init_size, window_size, minPts))
 total_embedding = np.empty(shape=[0, 2])
 total_klabels = []
 
@@ -121,7 +121,7 @@ for reinit in range(reinit_cnt):
         label = labels[reinit * reinit_period:reinit * reinit_period + init_size]
         embed_count = embed_count + init_size
 
-        step_cnt = (reinit_period - init_size) / horizon
+        step_cnt = (reinit_period - init_size) / window_size
         start_index = reinit * reinit_period + init_size
     else:
         # re-init
@@ -134,7 +134,7 @@ for reinit in range(reinit_cnt):
             embedding = reducer.fit_transform(dataPeriod)
 
         embed_count = embed_count + half_init
-        step_cnt = np.math.ceil((reinit_period - half_init) / horizon)
+        step_cnt = np.math.ceil((reinit_period - half_init) / window_size)
         start_index = reinit * reinit_period + half_init
     end_index = (reinit + 1) * reinit_period
     initTimeEnd = time.time()
@@ -146,19 +146,19 @@ for reinit in range(reinit_cnt):
     # each window of umap
     windowTimeStart = time.time()
     for i in range(int(step_cnt)):
-        firstIndex = start_index + i * horizon
+        firstIndex = start_index + i * window_size
         if firstIndex > end_index:
             break
-        lastIndex = start_index + (i + 1) * horizon
+        lastIndex = start_index + (i + 1) * window_size
         if lastIndex > end_index:
             lastIndex = end_index
         embed_count = embed_count + lastIndex - firstIndex
-        # data = np.concatenate(data, X[start_index + i * horizon:start_index + (i + 1) * horizon])
+        # data = np.concatenate(data, X[start_index + i * window_size:start_index + (i + 1) * window_size])
         label = np.concatenate((label, labels[firstIndex:lastIndex]), axis=0)
         if algo != Algo.DBSCAN:
             embedding = np.append(embedding, reducer.transform(X[firstIndex:lastIndex]), axis=0)
         dataPeriod = np.concatenate((dataPeriod, X[firstIndex:lastIndex]), axis=0)
-        # print('X[{}:{}]'.format(start_index+i*horizon, start_index+(i+1)*horizon))
+        # print('X[{}:{}]'.format(start_index+i*window_size, start_index+(i+1)*window_size))
     windowTimeEnd = time.time()
     print('***windows elapsed time is : {}***'.format((windowTimeEnd - windowTimeStart)))
     timedbscanStart = time.time()
@@ -268,12 +268,12 @@ if algo != Algo.DBSCAN:
     ax1.set_title('Actual Labels', fontsize=24)
     ax2.scatter(total_embedding[:, 0], total_embedding[:, 1], c=total_klabels, s=0.5, cmap='Spectral')
     ax2.set_title('Predicted Labels', fontsize=24)
-    filename2 = streamName + "-horizon" + str(horizon) + "-initSize" + str(init_size) + "-reinit" + str(reinit_period) + ".png"
+    filename2 = streamName + "-window_size" + str(window_size) + "-initSize" + str(init_size) + "-reinit" + str(reinit_period) + ".png"
     output2 = folder + filename2
     fig.savefig(output2)
 
 print("Stream name: " + streamName)
-print("Horizon: " + str(horizon))
+print("Horizon: " + str(window_size))
 print("Init size: " + str(init_size))
 print("Overlap size" + str(half_init))
 print("Reinit period: " + str(reinit_period))
